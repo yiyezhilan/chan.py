@@ -9,6 +9,9 @@ from Math.Demark import CDemarkEngine, CDemarkIndex
 from Math.KDJ import KDJ
 from Math.MACD import CMACD, CMACD_item
 from Math.RSI import RSI
+from Math.RSI6 import RSI6
+from Math.RSI12 import RSI12
+from Math.RSI24 import RSI24
 from Math.TrendModel import CTrendModel
 
 from .TradeInfo import CTradeInfo
@@ -34,6 +37,7 @@ class CKLine_Unit:
         self.sup_kl: Optional[CKLine_Unit] = None  # 指向更高级别KLU
 
         from KLine.KLine import CKLine
+
         self.__klc: Optional[CKLine] = None  # 指向KLine
 
         # self.macd: Optional[CMACD_item] = None
@@ -65,6 +69,9 @@ class CKLine_Unit:
         obj.boll = copy.deepcopy(self.boll, memo)
         if hasattr(self, "rsi"):
             obj.rsi = copy.deepcopy(self.rsi, memo)
+            obj.rsi6 = copy.deepcopy(self.rsi6, memo)
+            obj.rsi12 = copy.deepcopy(self.rsi12, memo)
+            obj.rsi24 = copy.deepcopy(self.rsi24, memo)
         if hasattr(self, "kdj"):
             obj.kdj = copy.deepcopy(self.kdj, memo)
         obj.set_idx(self.idx)
@@ -94,17 +101,23 @@ class CKLine_Unit:
             if autofix:
                 self.low = min([self.low, self.open, self.high, self.close])
             else:
-                raise CChanException(f"{self.time} low price={self.low} is not min of [low={self.low}, open={self.open}, high={self.high}, close={self.close}]", ErrCode.KL_DATA_INVALID)
+                raise CChanException(
+                    f"{self.time} low price={self.low} is not min of [low={self.low}, open={self.open}, high={self.high}, close={self.close}]",
+                    ErrCode.KL_DATA_INVALID,
+                )
         if self.high < max([self.low, self.open, self.high, self.close]):
             if autofix:
                 self.high = max([self.low, self.open, self.high, self.close])
             else:
-                raise CChanException(f"{self.time} high price={self.high} is not max of [low={self.low}, open={self.open}, high={self.high}, close={self.close}]", ErrCode.KL_DATA_INVALID)
+                raise CChanException(
+                    f"{self.time} high price={self.high} is not max of [low={self.low}, open={self.open}, high={self.high}, close={self.close}]",
+                    ErrCode.KL_DATA_INVALID,
+                )
 
     def add_children(self, child):
         self.sub_kl_list.append(child)
 
-    def set_parent(self, parent: 'CKLine_Unit'):
+    def set_parent(self, parent: "CKLine_Unit"):
         self.sup_kl = parent
 
     def get_children(self):
@@ -123,13 +136,23 @@ class CKLine_Unit:
             elif isinstance(metric_model, CTrendModel):
                 if metric_model.type not in self.trend:
                     self.trend[metric_model.type] = {}
-                self.trend[metric_model.type][metric_model.T] = metric_model.add(self.close)
+                self.trend[metric_model.type][metric_model.T] = metric_model.add(
+                    self.close
+                )
             elif isinstance(metric_model, BollModel):
                 self.boll: BOLL_Metric = metric_model.add(self.close)
             elif isinstance(metric_model, CDemarkEngine):
-                self.demark = metric_model.update(idx=self.idx, close=self.close, high=self.high, low=self.low)
+                self.demark = metric_model.update(
+                    idx=self.idx, close=self.close, high=self.high, low=self.low
+                )
             elif isinstance(metric_model, RSI):
-                self.rsi = metric_model.add(self.close)
+                self.rsi= metric_model.add(self.close)
+            elif isinstance(metric_model, RSI6):
+                self.rsi6 = metric_model.add(self.close)
+            elif isinstance(metric_model, RSI12):
+                self.rsi12 = metric_model.add(self.close)
+            elif isinstance(metric_model, RSI24):
+                self.rsi24 = metric_model.add(self.close)
             elif isinstance(metric_model, KDJ):
                 self.kdj = metric_model.add(self.high, self.low, self.close)
 
@@ -147,7 +170,7 @@ class CKLine_Unit:
                 return True
         return False
 
-    def set_pre_klu(self, pre_klu: Optional['CKLine_Unit']):
+    def set_pre_klu(self, pre_klu: Optional["CKLine_Unit"]):
         if pre_klu is None:
             return
         pre_klu.next = self

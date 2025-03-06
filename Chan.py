@@ -29,10 +29,20 @@ class CChan:
             lv_list = [KL_TYPE.K_DAY, KL_TYPE.K_60M]
         check_kltype_order(lv_list)  # lv_list顺序从高到低
         self.code = code
-        self.begin_time = str(begin_time) if isinstance(begin_time, datetime.date) else begin_time
-        self.end_time = str(end_time) if isinstance(end_time, datetime.date) else end_time
+        self.begin_time = (
+            str(begin_time) if isinstance(begin_time, datetime.date) else begin_time
+        )
+        self.end_time = (
+            str(end_time) if isinstance(end_time, datetime.date) else end_time
+        )
         self.autype = autype
         self.data_src = data_src
+
+        if len(code) <= 5:
+            self.data_src = DATA_SRC.YFINANCE
+        if ".US" in code:
+            self.data_src = DATA_SRC.YFINANCE
+
         self.lv_list: List[KL_TYPE] = lv_list
 
         if config is None:
@@ -64,9 +74,9 @@ class CChan:
         obj.kl_misalign_cnt = self.kl_misalign_cnt
         obj.kl_inconsistent_detail = copy.deepcopy(self.kl_inconsistent_detail, memo)
         obj.g_kl_iter = copy.deepcopy(self.g_kl_iter, memo)
-        if hasattr(self, 'klu_cache'):
+        if hasattr(self, "klu_cache"):
             obj.klu_cache = copy.deepcopy(self.klu_cache, memo)
-        if hasattr(self, 'klu_last_t'):
+        if hasattr(self, "klu_last_t"):
             obj.klu_last_t = copy.deepcopy(self.klu_last_t, memo)
         obj.kl_datas = {}
         for kl_type, ckline in self.kl_datas.items():
@@ -77,22 +87,34 @@ class CChan:
                     assert id(klu) in memo
                     if klu.sup_kl:
                         memo[id(klu)].sup_kl = memo[id(klu.sup_kl)]
-                    memo[id(klu)].sub_kl_list = [memo[id(sub_kl)] for sub_kl in klu.sub_kl_list]
+                    memo[id(klu)].sub_kl_list = [
+                        memo[id(sub_kl)] for sub_kl in klu.sub_kl_list
+                    ]
         return obj
 
     def do_init(self):
         self.kl_datas: Dict[KL_TYPE, CKLine_List] = {}
         for idx in range(len(self.lv_list)):
-            self.kl_datas[self.lv_list[idx]] = CKLine_List(self.lv_list[idx], conf=self.conf)
+            self.kl_datas[self.lv_list[idx]] = CKLine_List(
+                self.lv_list[idx], conf=self.conf
+            )
 
-    def load_stock_data(self, stockapi_instance: CCommonStockApi, lv) -> Iterable[CKLine_Unit]:
+    def load_stock_data(
+        self, stockapi_instance: CCommonStockApi, lv
+    ) -> Iterable[CKLine_Unit]:
         for KLU_IDX, klu in enumerate(stockapi_instance.get_kl_data()):
             klu.set_idx(KLU_IDX)
             klu.kl_type = lv
             yield klu
 
     def get_load_stock_iter(self, stockapi_cls, lv):
-        stockapi_instance = stockapi_cls(code=self.code, k_type=lv, begin_date=self.begin_time, end_date=self.end_time, autype=self.autype)
+        stockapi_instance = stockapi_cls(
+            code=self.code,
+            k_type=lv,
+            begin_date=self.begin_time,
+            end_date=self.end_time,
+            autype=self.autype,
+        )
         return self.load_stock_data(stockapi_instance, lv)
 
     def add_lv_iter(self, lv_idx, iter):
@@ -129,9 +151,9 @@ class CChan:
 
     def trigger_load(self, inp):
         # {type: [klu, ...]}
-        if not hasattr(self, 'klu_cache'):
+        if not hasattr(self, "klu_cache"):
             self.klu_cache: List[Optional[CKLine_Unit]] = [None for _ in self.lv_list]
-        if not hasattr(self, 'klu_last_t'):
+        if not hasattr(self, "klu_last_t"):
             self.klu_last_t = [CTime(1980, 1, 1, 0, 0) for _ in self.lv_list]
         for lv_idx, lv in enumerate(self.lv_list):
             if lv not in inp:
@@ -157,7 +179,10 @@ class CChan:
                 lv_klu_iter.append(self.get_load_stock_iter(stockapi_cls, lv))
                 valid_lv_list.append(lv)
             except CChanException as e:
-                if e.errcode == ErrCode.SRC_DATA_NOT_FOUND and self.conf.auto_skip_illegal_sub_lv:
+                if (
+                    e.errcode == ErrCode.SRC_DATA_NOT_FOUND
+                    and self.conf.auto_skip_illegal_sub_lv
+                ):
                     if self.conf.print_warning:
                         print(f"[WARNING-{self.code}]{lv}级别获取数据失败，跳过")
                     del self.kl_datas[lv]
@@ -170,13 +195,20 @@ class CChan:
         _dict = {}
         if self.data_src == DATA_SRC.BAO_STOCK:
             from DataAPI.BaoStockAPI import CBaoStock
+
             _dict[DATA_SRC.BAO_STOCK] = CBaoStock
         elif self.data_src == DATA_SRC.CCXT:
             from DataAPI.ccxt import CCXT
+
             _dict[DATA_SRC.CCXT] = CCXT
         elif self.data_src == DATA_SRC.CSV:
             from DataAPI.csvAPI import CSV_API
+
             _dict[DATA_SRC.CSV] = CSV_API
+        elif self.data_src == DATA_SRC.YFINANCE:
+            from DataAPI.YfinanceAPI import CYFinance
+
+            _dict[DATA_SRC.YFINANCE] = CYFinance
         if self.data_src in _dict:
             return _dict[self.data_src]
         assert isinstance(self.data_src, str)
@@ -196,7 +228,9 @@ class CChan:
             self.klu_cache: List[Optional[CKLine_Unit]] = [None for _ in self.lv_list]
             self.klu_last_t = [CTime(1980, 1, 1, 0, 0) for _ in self.lv_list]
 
-            yield from self.load_iterator(lv_idx=0, parent_klu=None, step=step)  # 计算入口
+            yield from self.load_iterator(
+                lv_idx=0, parent_klu=None, step=step
+            )  # 计算入口
             if not step:  # 非回放模式全部算完之后才算一次中枢和线段
                 for lv in self.lv_list:
                     self.kl_datas[lv].cal_seg_and_zs()
@@ -208,7 +242,11 @@ class CChan:
             raise CChanException("最高级别没有获得任何数据", ErrCode.NO_DATA)
 
     def set_klu_parent_relation(self, parent_klu, kline_unit, cur_lv, lv_idx):
-        if self.conf.kl_data_check and kltype_lte_day(cur_lv) and kltype_lte_day(self.lv_list[lv_idx-1]):
+        if (
+            self.conf.kl_data_check
+            and kltype_lte_day(cur_lv)
+            and kltype_lte_day(self.lv_list[lv_idx - 1])
+        ):
             self.check_kl_consitent(parent_klu, kline_unit)
         parent_klu.add_children(kline_unit)
         kline_unit.set_parent(parent_klu)
@@ -233,7 +271,11 @@ class CChan:
         # K线时间天级别以下描述的是结束时间，如60M线，每天第一根是10点30的
         # 天以上是当天日期
         cur_lv = self.lv_list[lv_idx]
-        pre_klu = self[lv_idx][-1][-1] if len(self[lv_idx]) > 0 and len(self[lv_idx][-1]) > 0 else None
+        pre_klu = (
+            self[lv_idx][-1][-1]
+            if len(self[lv_idx]) > 0 and len(self[lv_idx][-1]) > 0
+            else None
+        )
         while True:
             if self.klu_cache[lv_idx]:
                 kline_unit = self.klu_cache[lv_idx]
@@ -244,7 +286,10 @@ class CChan:
                     kline_unit = self.get_next_lv_klu(lv_idx)
                     self.try_set_klu_idx(lv_idx, kline_unit)
                     if not kline_unit.time > self.klu_last_t[lv_idx]:
-                        raise CChanException(f"kline time err, cur={kline_unit.time}, last={self.klu_last_t[lv_idx]}, or refer to quick_guide.md, try set auto=False in the CTime returned by your data source class", ErrCode.KL_NOT_MONOTONOUS)
+                        raise CChanException(
+                            f"kline time err, cur={kline_unit.time}, last={self.klu_last_t[lv_idx]}, or refer to quick_guide.md, try set auto=False in the CTime returned by your data source class",
+                            ErrCode.KL_NOT_MONOTONOUS,
+                        )
                     self.klu_last_t[lv_idx] = kline_unit.time
                 except StopIteration:
                     break
@@ -257,30 +302,42 @@ class CChan:
             self.add_new_kl(cur_lv, kline_unit)
             if parent_klu:
                 self.set_klu_parent_relation(parent_klu, kline_unit, cur_lv, lv_idx)
-            if lv_idx != len(self.lv_list)-1:
-                for _ in self.load_iterator(lv_idx+1, kline_unit, step):
+            if lv_idx != len(self.lv_list) - 1:
+                for _ in self.load_iterator(lv_idx + 1, kline_unit, step):
                     ...
                 self.check_kl_align(kline_unit, lv_idx)
             if lv_idx == 0 and step:
                 yield self
 
     def check_kl_consitent(self, parent_klu, sub_klu):
-        if parent_klu.time.year != sub_klu.time.year or \
-           parent_klu.time.month != sub_klu.time.month or \
-           parent_klu.time.day != sub_klu.time.day:
+        if (
+            parent_klu.time.year != sub_klu.time.year
+            or parent_klu.time.month != sub_klu.time.month
+            or parent_klu.time.day != sub_klu.time.day
+        ):
             self.kl_inconsistent_detail[str(parent_klu.time)].append(sub_klu.time)
             if self.conf.print_warning:
-                print(f"[WARNING-{self.code}]父级别时间是{parent_klu.time}，次级别时间却是{sub_klu.time}")
+                print(
+                    f"[WARNING-{self.code}]父级别时间是{parent_klu.time}，次级别时间却是{sub_klu.time}"
+                )
             if len(self.kl_inconsistent_detail) >= self.conf.max_kl_inconsistent_cnt:
-                raise CChanException(f"父&子级别K线时间不一致条数超过{self.conf.max_kl_inconsistent_cnt}！！", ErrCode.KL_TIME_INCONSISTENT)
+                raise CChanException(
+                    f"父&子级别K线时间不一致条数超过{self.conf.max_kl_inconsistent_cnt}！！",
+                    ErrCode.KL_TIME_INCONSISTENT,
+                )
 
     def check_kl_align(self, kline_unit, lv_idx):
         if self.conf.kl_data_check and len(kline_unit.sub_kl_list) == 0:
             self.kl_misalign_cnt += 1
             if self.conf.print_warning:
-                print(f"[WARNING-{self.code}]当前{kline_unit.time}没在次级别{self.lv_list[lv_idx+1]}找到K线！！")
+                print(
+                    f"[WARNING-{self.code}]当前{kline_unit.time}没在次级别{self.lv_list[lv_idx + 1]}找到K线！！"
+                )
             if self.kl_misalign_cnt >= self.conf.max_kl_misalgin_cnt:
-                raise CChanException(f"在次级别找不到K线条数超过{self.conf.max_kl_misalgin_cnt}！！", ErrCode.KL_DATA_NOT_ALIGN)
+                raise CChanException(
+                    f"在次级别找不到K线条数超过{self.conf.max_kl_misalgin_cnt}！！",
+                    ErrCode.KL_DATA_NOT_ALIGN,
+                )
 
     def __getitem__(self, n) -> CKLine_List:
         if isinstance(n, KL_TYPE):
@@ -295,3 +352,45 @@ class CChan:
             return self[idx].bs_point_lst.getSortedBspList()
         assert len(self.lv_list) == 1
         return self[0].bs_point_lst.getSortedBspList()
+        
+    def get_stock_name(self):
+        stockapi_cls = self.GetStockAPI()
+        
+        # Check if we're already dealing with BaoStock
+        if hasattr(self, '_stock_name'):
+            return self._stock_name
+        
+        # Ensure connection is established
+        stockapi_cls.do_init()
+        
+        try:
+            # For BaoStock, we can directly query the stock info without creating a full instance
+            if stockapi_cls.__name__ == 'CBaoStock':
+                import baostock as bs
+                rs = bs.query_stock_basic(code=self.code)
+                if rs.error_code != "0":
+                    return f"Unknown ({self.code})"  # Return a fallback name if query fails
+                
+                if rs.next():  # Make sure we have data
+                    _, code_name, _, _, _, _ = rs.get_row_data()
+                    self._stock_name = code_name
+                    return code_name
+                return f"Unknown ({self.code})"
+            else:
+                # For other data sources, use the regular approach
+                stockapi_instance = stockapi_cls(
+                    code=self.code,
+                    k_type=self.lv_list[0],
+                    begin_date=self.begin_time,
+                    end_date=self.end_time,
+                    autype=self.autype,
+                )
+                self._stock_name = stockapi_instance.name
+                return self._stock_name
+        except Exception as e:
+            print(f"Error getting stock name: {e}")
+            return f"Unknown ({self.code})"  # Return a fallback
+        finally:
+            # Don't close the connection if we're in the middle of other operations
+            if not self.conf.trigger_step:
+                stockapi_cls.do_close()

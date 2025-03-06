@@ -75,7 +75,7 @@ class CSV_API(CCommonStockApi):
                 continue
             yield CKLine_Unit(create_item_dict(data, self.columns))
 
-    def SetBasciInfo(self):
+    def SetBasicInfo(self):
         pass
 
     @classmethod

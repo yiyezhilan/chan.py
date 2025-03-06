@@ -13,14 +13,14 @@ class CCommonStockApi:
         self.begin_date = begin_date
         self.end_date = end_date
         self.autype = autype
-        self.SetBasciInfo()
+        self.SetBasicInfo()
 
     @abc.abstractmethod
     def get_kl_data(self) -> Iterable[CKLine_Unit]:
         pass
 
     @abc.abstractmethod
-    def SetBasciInfo(self):
+    def SetBasicInfo(self):
         pass
 
     @classmethod

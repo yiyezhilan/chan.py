@@ -1141,7 +1141,7 @@ create table if not exists {table_name}(
 }
 ```
 
-2. `SetBasciInfo()`：用于设置股票名字和其他需要用到的信息
+2. `SetBasicInfo()`：用于设置股票名字和其他需要用到的信息
 
 ### 实时数据接入
 当使用本框架用于实盘交易时，往往需要使用实时的K线数据，本框架已经实现了 akshare，futu，sina，pytdx 等几种实时数据类；如果要实现其他实时数据接入，仅需参考 `DataAPI/SnapshotAPI/` 目录下相应脚本的实现即可；

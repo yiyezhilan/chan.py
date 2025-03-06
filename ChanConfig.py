@@ -10,6 +10,9 @@ from Math.Demark import CDemarkEngine
 from Math.KDJ import KDJ
 from Math.MACD import CMACD
 from Math.RSI import RSI
+from Math.RSI6 import RSI6
+from Math.RSI12 import RSI12
+from Math.RSI24 import RSI24
 from Math.TrendModel import CTrendModel
 from Seg.SegConfig import CSegConfig
 from ZS.ZSConfig import CZSConfig
@@ -97,7 +100,10 @@ class CChanConfig:
                 countdown_cmp2close=self.demark_config['countdown_cmp2close'],
             ))
         if self.cal_rsi:
-            res.append(RSI(self.rsi_cycle))
+            # res.append(RSI(self.rsi_cycle))
+            res.append(RSI6(period=6))
+            res.append(RSI12(period=12))
+            res.append(RSI24(period=24))
         if self.cal_kdj:
             res.append(KDJ(self.kdj_cycle))
         return res

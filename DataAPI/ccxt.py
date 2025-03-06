@@ -46,7 +46,7 @@ class CCXT(CCommonStockApi):
             ]
             yield CKLine_Unit(self.create_item_dict(item_data, GetColumnNameFromFieldList(fields)), autofix=True)
 
-    def SetBasciInfo(self):
+    def SetBasicInfo(self):
         pass
 
     @classmethod
