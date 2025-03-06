@@ -11,8 +11,22 @@
              ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝╚═╝        ╚═╝
 ```
 
-<p><a href="https://github.com/Vespa314/chan.py/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/Vespa314/chan.py" /></a></p>
+[![GitHub stars](https://img.shields.io/github/stars/Vespa314/chan.py)](https://github.com/Vespa314/chan.py/stargazers)
 
+---
+
+基于原 [chan.py](https://github.com/Vespa314/chan.py) 进行了一些修改，包括：
+- 静态绘图后端使用Plotly交互查看
+- 多功能的缠论绘图APP，同时绘制KDJ、RSI和MACD等指标
+- 可输出一段时间的动态视频
+- 支持美股数据
+
+APP界面如下：
+
+![APP界面](./diagram.png)
+
+
+---
 - 讨论组：<a href="https://t.me/zen_python">Telegram</a>
 - [快速上手指南](./quick_guide.md)
 
