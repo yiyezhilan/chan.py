@@ -352,25 +352,32 @@ class CChan:
             return self[idx].bs_point_lst.getSortedBspList()
         assert len(self.lv_list) == 1
         return self[0].bs_point_lst.getSortedBspList()
-        
+
     def get_stock_name(self):
+        # 返回股票名称，如果是美股，直接返回code
+        if len(self.code) <= 5:
+            return self.code
+        if ".US" in self.code:
+            return self.code
+        
         stockapi_cls = self.GetStockAPI()
-        
+
         # Check if we're already dealing with BaoStock
-        if hasattr(self, '_stock_name'):
+        if hasattr(self, "_stock_name"):
             return self._stock_name
-        
+
         # Ensure connection is established
         stockapi_cls.do_init()
-        
+
         try:
             # For BaoStock, we can directly query the stock info without creating a full instance
-            if stockapi_cls.__name__ == 'CBaoStock':
+            if stockapi_cls.__name__ == "CBaoStock":
                 import baostock as bs
+
                 rs = bs.query_stock_basic(code=self.code)
                 if rs.error_code != "0":
                     return f"Unknown ({self.code})"  # Return a fallback name if query fails
-                
+
                 if rs.next():  # Make sure we have data
                     _, code_name, _, _, _, _ = rs.get_row_data()
                     self._stock_name = code_name
