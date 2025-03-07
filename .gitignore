@@ -7,3 +7,4 @@ plotly_*.html
 plot_*.html
 Untitled*
 test*
+__pycache__/
